@@ -1,6 +1,6 @@
 [package]
 name = "xvncviewer"
-version = "0.1.0"
+version = "0.1.1"
 description = "A local modern VNC viewer built on noVNC and system WebViews"
 authors = ["Codex"]
 edition = "2021"

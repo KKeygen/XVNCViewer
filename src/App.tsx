@@ -12,6 +12,9 @@ import { listen } from "@tauri-apps/api/event";
 import {
   Clipboard,
   Command,
+  Camera,
+  Eye,
+  EyeOff,
   Fullscreen,
   History,
   Keyboard,
@@ -467,7 +470,7 @@ export function App() {
         </section>
       </aside>
 
-      <section className={`workspace ${openSessions.length === 0 ? "empty-workspace" : ""}`}>
+      <section className="workspace">
         <header className="session-bar">
           {windowMode ? (
             <div className="window-session-title">
@@ -525,14 +528,17 @@ export function App() {
               <button title="Release input" onClick={activeHandle?.releaseInput} type="button">
                 <Keyboard size={17} />
               </button>
-              <label className="toolbar-switch" title="Toggle view only">
-                <input
-                  checked={viewOnly}
-                  onChange={(event) => toggleViewOnly(event.target.checked)}
-                  type="checkbox"
-                />
-                View only
-              </label>
+              <button title="Capture thumbnail" onClick={captureActiveThumbnail} type="button">
+                <Camera size={17} />
+              </button>
+              <button
+                className={viewOnly ? "active" : ""}
+                title={viewOnly ? "Disable view only" : "Enable view only"}
+                onClick={() => toggleViewOnly(!viewOnly)}
+                type="button"
+              >
+                {viewOnly ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
               <button
                 title="Open current session in a native window"
                 onClick={openActiveSessionWindow}
@@ -572,37 +578,6 @@ export function App() {
             />
           ))}
         </section>
-
-        {openSessions.length > 0 && (
-          <footer className="session-strip">
-            <div className="session-thumbs">
-              {openSessions.map((session) => (
-                <button
-                  className={`session-thumb ${session.id === activeSessionId ? "active" : ""}`}
-                  key={session.id}
-                  onClick={() => setActiveSessionId(session.id)}
-                  type="button"
-                >
-                  {session.thumbnail ? <img src={session.thumbnail} alt="" /> : <Monitor size={18} />}
-                  <span>{session.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="viewer-toggles">
-              <button onClick={captureActiveThumbnail} type="button">
-                Snapshot
-              </button>
-              <label className="switch">
-                <input
-                  checked={viewOnly}
-                  onChange={(event) => toggleViewOnly(event.target.checked)}
-                  type="checkbox"
-                />
-                View only
-              </label>
-            </div>
-          </footer>
-        )}
       </section>
     </main>
   );

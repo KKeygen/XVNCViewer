@@ -18,7 +18,6 @@ import {
   Monitor,
   MonitorUp,
   Play,
-  Plus,
   Square,
   X,
 } from "lucide-react";
@@ -62,6 +61,16 @@ interface SessionHandle {
   disconnect: () => void;
   releaseInput: () => void;
   sendCtrlAltDel: () => void;
+}
+
+interface WindowSessionPayload {
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  viewOnly: boolean;
+  wsUrl: string;
 }
 
 function isTauriRuntime() {
@@ -155,9 +164,11 @@ export function App() {
   const [password, setPassword] = useState("");
   const [viewOnly, setViewOnly] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [sessionWindowError, setSessionWindowError] = useState<string | null>(null);
   const [openSessions, setOpenSessions] = useState<OpenSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [immersive, setImmersive] = useState(false);
+  const [windowMode, setWindowMode] = useState(false);
   const sessionRefs = useRef<Record<string, SessionHandle | null>>({});
   const activeSessionIdRef = useRef<string | null>(null);
 
@@ -175,6 +186,37 @@ export function App() {
     if (!activeSession) return;
     setViewOnly(activeSession.viewOnly);
   }, [activeSession?.id]);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("windowSession");
+    if (!token) return;
+
+    setWindowMode(true);
+    invoke<WindowSessionPayload>("claim_window_session", { token })
+      .then((payload) => {
+        const id = crypto.randomUUID();
+        setOpenSessions([
+          {
+            id,
+            profileId: `window-${token}`,
+            name: payload.name,
+            host: payload.host,
+            port: payload.port,
+            username: payload.username,
+            password: payload.password,
+            wsUrl: payload.wsUrl,
+            viewOnly: payload.viewOnly,
+            status: "connecting",
+            desktopName: "Connecting",
+          },
+        ]);
+        setActiveSessionId(id);
+        activeSessionIdRef.current = id;
+      })
+      .catch((error) => {
+        setSessionWindowError(error instanceof Error ? error.message : String(error));
+      });
+  }, []);
 
   useEffect(() => {
     const unlisteners = [
@@ -317,8 +359,32 @@ export function App() {
     if (activeSessionId) updateSession(activeSessionId, { viewOnly: next });
   }
 
+  async function openActiveSessionWindow() {
+    if (!activeSessionId || !activeSession) return;
+    try {
+      await invoke("open_session_window", {
+        request: {
+          name: activeSession.name,
+          host: activeSession.host,
+          port: activeSession.port,
+          username: activeSession.username,
+          password: activeSession.password,
+          viewOnly: activeSession.viewOnly,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (windowMode) setSessionWindowError(message);
+      else setConnectError(message);
+    }
+  }
+
   return (
-    <main className={`app-shell ${immersive ? "immersive" : ""}`}>
+    <main
+      className={`app-shell ${immersive ? "immersive" : ""} ${
+        windowMode ? "session-window" : ""
+      }`}
+    >
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">
@@ -401,67 +467,97 @@ export function App() {
         </section>
       </aside>
 
-      <section className="workspace">
+      <section className={`workspace ${openSessions.length === 0 ? "empty-workspace" : ""}`}>
         <header className="session-bar">
-          <div className="session-tabs" role="tablist" aria-label="Open VNC sessions">
-            {openSessions.map((session) => (
+          {windowMode ? (
+            <div className="window-session-title">
+              <span className={`status-dot ${activeSession?.status ?? "connecting"}`} />
+              <span>
+                <strong>{activeSession?.name ?? "Session window"}</strong>
+                {activeSession && (
+                  <small>
+                    {activeSession.host}:{activeSession.port}
+                  </small>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="session-tabs" role="tablist" aria-label="Open VNC sessions">
+              {openSessions.map((session) => (
+                <button
+                  className={`session-tab ${session.id === activeSessionId ? "active" : ""}`}
+                  key={session.id}
+                  onClick={() => setActiveSessionId(session.id)}
+                  role="tab"
+                  type="button"
+                >
+                  <span className={`status-dot ${session.status}`} />
+                  <span>
+                    <strong>{session.name}</strong>
+                    <small>
+                      {session.host}:{session.port}
+                    </small>
+                  </span>
+                  <span
+                    className="close-tab"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeSession(session.id);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <X size={13} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeSession && (
+            <div className="toolbar">
+              <button title="Clipboard" type="button">
+                <Clipboard size={17} />
+              </button>
+              <button title="Send Ctrl+Alt+Del" onClick={activeHandle?.sendCtrlAltDel} type="button">
+                <Command size={17} />
+              </button>
+              <button title="Release input" onClick={activeHandle?.releaseInput} type="button">
+                <Keyboard size={17} />
+              </button>
+              <label className="toolbar-switch" title="Toggle view only">
+                <input
+                  checked={viewOnly}
+                  onChange={(event) => toggleViewOnly(event.target.checked)}
+                  type="checkbox"
+                />
+                View only
+              </label>
               <button
-                className={`session-tab ${session.id === activeSessionId ? "active" : ""}`}
-                key={session.id}
-                onClick={() => setActiveSessionId(session.id)}
-                role="tab"
+                title="Open current session in a native window"
+                onClick={openActiveSessionWindow}
                 type="button"
               >
-                <span className={`status-dot ${session.status}`} />
-                <span>
-                  <strong>{session.name}</strong>
-                  <small>
-                    {session.host}:{session.port}
-                  </small>
-                </span>
-                <span
-                  className="close-tab"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeSession(session.id);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <X size={13} />
-                </span>
+                <MonitorUp size={17} />
               </button>
-            ))}
-            <button className="new-tab" onClick={() => setImmersive(false)} type="button">
-              <Plus size={15} />
-            </button>
-          </div>
-
-          <div className="toolbar">
-            <button title="Clipboard" type="button">
-              <Clipboard size={17} />
-            </button>
-            <button title="Send Ctrl+Alt+Del" onClick={activeHandle?.sendCtrlAltDel} type="button">
-              <Command size={17} />
-            </button>
-            <button title="Release input" onClick={activeHandle?.releaseInput} type="button">
-              <Keyboard size={17} />
-            </button>
-            <button title="Toggle fullscreen" onClick={toggleImmersive} type="button">
-              <Fullscreen size={17} />
-            </button>
-            <button title="Disconnect current session" onClick={closeActiveSession} type="button">
-              <Square size={15} />
-            </button>
-          </div>
+              <button title="Toggle fullscreen" onClick={toggleImmersive} type="button">
+                <Fullscreen size={17} />
+              </button>
+              <button title="Disconnect current session" onClick={closeActiveSession} type="button">
+                <Square size={15} />
+              </button>
+            </div>
+          )}
         </header>
 
         <section className="viewer-frame">
           {openSessions.length === 0 && (
             <div className="empty-state">
               <Monitor size={34} />
-              <strong>No active session</strong>
-              <span>Choose a recent host or start a new connection.</span>
+              <strong>{sessionWindowError ? "Session window failed" : "No active session"}</strong>
+              <span>
+                {sessionWindowError ?? "Choose a recent host or start a new connection."}
+              </span>
             </div>
           )}
           {openSessions.map((session) => (
@@ -477,34 +573,36 @@ export function App() {
           ))}
         </section>
 
-        <footer className="session-strip">
-          <div className="session-thumbs">
-            {openSessions.map((session) => (
-              <button
-                className={`session-thumb ${session.id === activeSessionId ? "active" : ""}`}
-                key={session.id}
-                onClick={() => setActiveSessionId(session.id)}
-                type="button"
-              >
-                {session.thumbnail ? <img src={session.thumbnail} alt="" /> : <Monitor size={18} />}
-                <span>{session.name}</span>
+        {openSessions.length > 0 && (
+          <footer className="session-strip">
+            <div className="session-thumbs">
+              {openSessions.map((session) => (
+                <button
+                  className={`session-thumb ${session.id === activeSessionId ? "active" : ""}`}
+                  key={session.id}
+                  onClick={() => setActiveSessionId(session.id)}
+                  type="button"
+                >
+                  {session.thumbnail ? <img src={session.thumbnail} alt="" /> : <Monitor size={18} />}
+                  <span>{session.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="viewer-toggles">
+              <button onClick={captureActiveThumbnail} type="button">
+                Snapshot
               </button>
-            ))}
-          </div>
-          <div className="viewer-toggles">
-            <button onClick={captureActiveThumbnail} type="button">
-              Snapshot
-            </button>
-            <label className="switch">
-              <input
-                checked={viewOnly}
-                onChange={(event) => toggleViewOnly(event.target.checked)}
-                type="checkbox"
-              />
-              View only
-            </label>
-          </div>
-        </footer>
+              <label className="switch">
+                <input
+                  checked={viewOnly}
+                  onChange={(event) => toggleViewOnly(event.target.checked)}
+                  type="checkbox"
+                />
+                View only
+              </label>
+            </div>
+          </footer>
+        )}
       </section>
     </main>
   );

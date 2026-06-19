@@ -12,6 +12,7 @@ declare module "@novnc/novnc" {
     );
 
     viewOnly: boolean;
+    showDotCursor: boolean;
     focusOnClick: boolean;
     scaleViewport: boolean;
     resizeSession: boolean;

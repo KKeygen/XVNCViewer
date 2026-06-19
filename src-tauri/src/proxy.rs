@@ -62,8 +62,8 @@ struct ProxySession {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProxySessionResponse {
-    session_id: String,
-    ws_url: String,
+    pub(crate) session_id: String,
+    pub(crate) ws_url: String,
 }
 
 #[derive(Serialize)]
@@ -115,7 +115,7 @@ impl ProxyState {
         Ok(addr)
     }
 
-    async fn create_session(
+    pub(crate) async fn create_session(
         &self,
         host: String,
         port: u16,

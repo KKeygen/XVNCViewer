@@ -61,6 +61,7 @@ export function useVncSession() {
       rfb.scaleViewport = true;
       rfb.resizeSession = true;
       rfb.viewOnly = viewOnly ?? false;
+      rfb.showDotCursor = true;
       rfb.focusOnClick = true;
       rfb.clipViewport = false;
       rfb.background = "#05070a";

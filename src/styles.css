@@ -36,7 +36,8 @@ button {
   background: #07090c;
 }
 
-.app-shell.immersive {
+.app-shell.immersive,
+.app-shell.session-window {
   grid-template-columns: 0 minmax(0, 1fr);
 }
 
@@ -52,7 +53,8 @@ button {
   transition: transform 140ms ease, opacity 140ms ease;
 }
 
-.app-shell.immersive .sidebar {
+.app-shell.immersive .sidebar,
+.app-shell.session-window .sidebar {
   transform: translateX(-100%);
   opacity: 0;
   pointer-events: none;
@@ -226,6 +228,10 @@ input:focus {
   background: #05070a;
 }
 
+.workspace.empty-workspace {
+  grid-template-rows: 58px minmax(0, 1fr);
+}
+
 .session-bar {
   display: flex;
   align-items: center;
@@ -248,12 +254,47 @@ input:focus {
   backdrop-filter: blur(12px);
 }
 
+.app-shell.session-window .workspace {
+  grid-template-rows: 58px minmax(0, 1fr);
+}
+
+.app-shell.session-window .session-tabs {
+  display: none;
+}
+
 .session-tabs {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
   overflow: hidden;
+}
+
+.window-session-title {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #eaf1f5;
+}
+
+.window-session-title strong,
+.window-session-title small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-session-title strong {
+  line-height: 1.2;
+}
+
+.window-session-title small {
+  margin-top: 3px;
+  color: #95a3ad;
+  font-size: 12px;
 }
 
 .session-tab {
@@ -292,7 +333,6 @@ input:focus {
   color: #fff;
 }
 
-.new-tab,
 .toolbar button,
 .viewer-toggles button {
   display: inline-flex;
@@ -314,10 +354,30 @@ input:focus {
 }
 
 .toolbar button:hover,
-.viewer-toggles button:hover,
-.new-tab:hover {
+.viewer-toggles button:hover {
   background: #26313a;
   color: #ffffff;
+}
+
+.toolbar-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  margin: 0;
+  padding: 0 9px;
+  border: 1px solid #2a333b;
+  border-radius: 6px;
+  background: #171d23;
+  color: #cbd5dc;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar-switch input {
+  width: 14px;
+  height: 14px;
+  accent-color: #d6f36d;
 }
 
 .status-dot {
@@ -411,7 +471,8 @@ input:focus {
   background: #0d1115;
 }
 
-.app-shell.immersive .session-strip {
+.app-shell.immersive .session-strip,
+.app-shell.session-window .session-strip {
   display: none;
 }
 

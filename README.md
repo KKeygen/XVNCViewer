@@ -4,6 +4,8 @@ A local, modern VNC viewer shell built around system WebViews rather than a bund
 
 [![CI](https://github.com/KKeygen/XVNCViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/KKeygen/XVNCViewer/actions/workflows/ci.yml)
 
+![XVNCViewer main window](docs/screenshot-main.png)
+
 ## License
 
 MIT. noVNC is used as an npm dependency under MPL-2.0; this project does not
